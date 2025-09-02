@@ -32,8 +32,16 @@ import {
     WebRtcTCPRelayDetectedEvent,
     SubscribeFailedEvent,
     WebRtcSdpOfferEvent,
-    WebRtcSdpAnswerEvent
+    WebRtcSdpAnswerEvent,
+    //My Custom Events
+    DeviceInfoSentEvent,
+    DeviceInfoRequestedEvent,
+    MobileDeviceDetectedEvent,
+    DesktopDeviceDetectedEvent,
+    DeviceOrientationChangedEvent
 } from '../Util/EventEmitter';
+
+import { DeviceDetector, DeviceInfo } from '../Util/DeviceDetector';
 import { WebXRController } from '../WebXR/WebXRController';
 import { MessageDirection } from '../UeInstanceMessage/StreamMessageController';
 import {
@@ -74,13 +82,15 @@ export class PixelStreaming {
     public config: Config;
 
     private _videoElementParent: HTMLElement;
-
     private allowConsoleCommands = false;
-
     private _videoStartTime: number;
     private _inputController: boolean;
-
     private _eventEmitter: PixelStreamingEventEmitter;
+
+    // device detection properties
+    private deviceInfo: DeviceInfo | null = null;
+    private deviceInfoSent: boolean = false;
+    private orientationHandler: ((event: Event) => void) | null = null;
 
     /**
      * @param config - A newly instantiated config object
@@ -95,14 +105,15 @@ export class PixelStreaming {
         }
 
         this._eventEmitter = new PixelStreamingEventEmitter();
-
         this.configureSettings();
 
         // setup WebRTC
         this.setWebRtcPlayerController(new WebRtcPlayerController(this.config, this));
 
-        this._webXrController = new WebXRController(this._webRtcController);
+        // Setup device detection using emitUIInteraction approach
+        this.setupDeviceDetection();
 
+        this._webXrController = new WebXRController(this._webRtcController);
         this._setupWebRtcTCPRelayDetection = this._setupWebRtcTCPRelayDetection.bind(this);
 
         // Add event listener for the webRtcConnected event
@@ -110,6 +121,179 @@ export class PixelStreaming {
             // Bind to the stats received event
             this._eventEmitter.addEventListener('statsReceived', this._setupWebRtcTCPRelayDetection);
         });
+    }
+
+    // Device detection setup using emitUIInteraction approach
+    private setupDeviceDetection(): void {
+        // Set up orientation change detection
+        this.orientationHandler = () => {
+            setTimeout(() => {
+                this.handleOrientationChange();
+            }, 500);
+        };
+        window.addEventListener('orientationchange', this.orientationHandler);
+        window.addEventListener('resize', this.orientationHandler);
+
+        // Listen for device info requests from UE using built-in Response handler
+        this.addResponseEventListener('UIInteraction', (jsonData: string) => {
+            console.log('📱 [UIInteraction] UI Interaction event triggered');
+
+            const data = JSON.parse(jsonData);
+
+            switch (data.type) {
+                case 'requestDeviceInfo':
+                    console.log('📱 UE requested device info:', data);
+
+                    // Emit local event
+                    this._eventEmitter.dispatchEvent(
+                        new DeviceInfoRequestedEvent({
+                            message: { type: 'requestDeviceInfo', timestamp: Date.now() }
+                        })
+                    );
+
+                    // Send device info back to UE
+                    this.sendDeviceInfo();
+                    break;
+
+                default:
+                    console.log('[UIInteraction] Unknown type value in data object value.');
+            }
+        });
+
+        // Register handler for 'requestDeviceInfo' messages coming FROM the streamer (UE)
+        this.registerMessageHandler(
+            'requestDeviceInfo',
+            MessageDirection.FromStreamer,
+            (data: ArrayBuffer) => {
+                try {
+                    // Convert ArrayBuffer to string
+                    const decoder = new TextDecoder('utf-16');
+                    const jsonStr = decoder.decode(data.slice(1));
+
+                    // Parse JSON
+                    const message = JSON.parse(jsonStr);
+
+                    console.log('📱 UE requested device info:', message);
+
+                    // Handle the request - send device info back
+                    this.handleDeviceInfoRequest(message);
+                } catch (error) {
+                    console.error('Error parsing requestDeviceInfo message:', error);
+                }
+            }
+        );
+    }
+
+    public handleDeviceInfoRequest(message: any) {
+        console.log('📱 requestDeviceInfo device info:', message);
+
+        // Emit local event
+        this._eventEmitter.dispatchEvent(
+            new DeviceInfoRequestedEvent({
+                message: { type: 'requestDeviceInfo', timestamp: Date.now() }
+            })
+        );
+
+        // Send device info back to UE
+        this.sendDeviceInfo();
+    }
+
+    // Send device information to Unreal Engine using emitUIInteraction
+    public sendDeviceInfo(): void {
+        const deviceInfo = DeviceDetector.getDeviceInfo();
+        this.deviceInfo = deviceInfo;
+
+        // Create message object using type/data structure for emitUIInteraction
+        const deviceMessage = {
+            type: 'deviceInfo',
+            data: deviceInfo
+        };
+
+        // Send to UE using emitUIInteraction
+        const success = this.emitUIInteraction(deviceMessage);
+
+        if (success) {
+            this.deviceInfoSent = true;
+            console.log('📤 Sent device info to UE:', deviceMessage);
+
+            // Emit local events for your application logic
+            this._eventEmitter.dispatchEvent(
+                new DeviceInfoSentEvent({
+                    deviceInfo: deviceInfo
+                })
+            );
+
+            // Emit device-type specific events
+            if (deviceInfo.isMobile || deviceInfo.isTablet) {
+                this._eventEmitter.dispatchEvent(
+                    new MobileDeviceDetectedEvent({
+                        deviceInfo: deviceInfo
+                    })
+                );
+            } else {
+                this._eventEmitter.dispatchEvent(
+                    new DesktopDeviceDetectedEvent({
+                        deviceInfo: deviceInfo
+                    })
+                );
+            }
+        } else {
+            console.warn('⚠️ Failed to send device info - connection not ready');
+        }
+    }
+
+    // Get the current device information
+    public getDeviceInfo(): DeviceInfo | null {
+        return this.deviceInfo;
+    }
+
+    // Check if device info has been sent
+    public hasDeviceInfoBeenSent(): boolean {
+        return this.deviceInfoSent;
+    }
+
+    // Handle orientation changes using emitUIInteraction
+    private handleOrientationChange(): void {
+        if (!this.deviceInfo) return;
+
+        const orientationMessage = {
+            type: 'orientationChange',
+            data: {
+                orientation: this.getOrientation(),
+                width: window.innerWidth,
+                height: window.innerHeight,
+                angle: this.getOrientationAngle(),
+                timestamp: Date.now()
+            }
+        };
+
+        // Send to UE using emitUIInteraction
+        this.emitUIInteraction(orientationMessage);
+
+        // Emit local event
+        this._eventEmitter.dispatchEvent(
+            new DeviceOrientationChangedEvent({
+                orientationData: {
+                    type: 'orientationChange',
+                    data: orientationMessage.data
+                }
+            })
+        );
+    }
+
+    // Get current orientation
+    private getOrientation(): string {
+        if (screen.orientation) {
+            return screen.orientation.type;
+        }
+
+        const angle = this.getOrientationAngle();
+        return angle === 0 || angle === 180 ? 'portrait' : 'landscape';
+    }
+
+    // Get orientation angle
+    private getOrientationAngle(): number {
+        return screen.orientation ? screen.orientation.angle : (window as any).orientation || 0;
     }
 
     /**
@@ -314,6 +498,13 @@ export class PixelStreaming {
     public disconnect() {
         this._eventEmitter.dispatchEvent(new StreamPreDisconnectEvent());
         this._webRtcController.close();
+
+        // Clean up orientation listeners
+        if (this.orientationHandler) {
+            window.removeEventListener('orientationchange', this.orientationHandler);
+            window.removeEventListener('resize', this.orientationHandler);
+            this.orientationHandler = null;
+        }
     }
 
     /**
@@ -503,6 +694,13 @@ export class PixelStreaming {
      */
     _onWebRtcConnected() {
         this._eventEmitter.dispatchEvent(new WebRtcConnectedEvent());
+
+        // Auto send device info when connected
+        setTimeout(() => {
+            if (!this.deviceInfoSent) {
+                this.sendDeviceInfo();
+            }
+        }, 1500);
     }
 
     /**
