@@ -134,32 +134,6 @@ export class PixelStreaming {
         window.addEventListener('orientationchange', this.orientationHandler);
         window.addEventListener('resize', this.orientationHandler);
 
-        // Listen for device info requests from UE using built-in Response handler
-        this.addResponseEventListener('UIInteraction', (jsonData: string) => {
-            console.log('📱 [UIInteraction] UI Interaction event triggered');
-
-            const data = JSON.parse(jsonData);
-
-            switch (data.type) {
-                case 'requestDeviceInfo':
-                    console.log('📱 UE requested device info:', data);
-
-                    // Emit local event
-                    this._eventEmitter.dispatchEvent(
-                        new DeviceInfoRequestedEvent({
-                            message: { type: 'requestDeviceInfo', timestamp: Date.now() }
-                        })
-                    );
-
-                    // Send device info back to UE
-                    this.sendDeviceInfo();
-                    break;
-
-                default:
-                    console.log('[UIInteraction] Unknown type value in data object value.');
-            }
-        });
-
         // Register handler for 'requestDeviceInfo' messages coming FROM the streamer (UE)
         this.registerMessageHandler(
             'requestDeviceInfo',
@@ -187,7 +161,7 @@ export class PixelStreaming {
     public handleDeviceInfoRequest(message: any) {
         console.log('📱 requestDeviceInfo device info:', message);
 
-        // Emit local event
+        // Emit local event using CustomEvent structure
         this._eventEmitter.dispatchEvent(
             new DeviceInfoRequestedEvent({
                 message: { type: 'requestDeviceInfo', timestamp: Date.now() }
@@ -216,7 +190,7 @@ export class PixelStreaming {
             this.deviceInfoSent = true;
             console.log('📤 Sent device info to UE:', deviceMessage);
 
-            // Emit local events for your application logic
+            // Emit local events using CustomEvent structure
             this._eventEmitter.dispatchEvent(
                 new DeviceInfoSentEvent({
                     deviceInfo: deviceInfo
@@ -270,7 +244,7 @@ export class PixelStreaming {
         // Send to UE using emitUIInteraction
         this.emitUIInteraction(orientationMessage);
 
-        // Emit local event
+        // Emit local event using CustomEvent structure
         this._eventEmitter.dispatchEvent(
             new DeviceOrientationChangedEvent({
                 orientationData: {

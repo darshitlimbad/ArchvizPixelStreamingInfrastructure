@@ -617,60 +617,68 @@ export class WebRtcTCPRelayDetectedEvent extends Event {
     }
 }
 
-// Device-related custom Events for Pixel Streaming
+// Device-related custom Events for Pixel Streaming (FIXED)
 // ------------------------------------------------------------------
 
 export class DeviceInfoSentEvent extends Event {
-    static readonly TYPE = 'deviceInfoSent';
-    override readonly type = 'deviceInfoSent';
-    readonly data: { deviceInfo: DeviceInfo };
+    override readonly type = 'deviceInfoSent' as const;
+    readonly data: {
+        deviceInfo: DeviceInfo;
+    };
+
     constructor(data: DeviceInfoSentEvent['data']) {
-        super(DeviceInfoSentEvent.TYPE);
+        super('deviceInfoSent');
         this.data = data;
     }
 }
 
 export class DeviceInfoRequestedEvent extends Event {
-    static readonly TYPE = 'deviceInfoRequested';
-    override readonly type = 'deviceInfoRequested';
-    readonly data: { message: { type: string; timestamp?: number } };
+    override readonly type = 'deviceInfoRequested' as const;
+    readonly data: {
+        message: { type: string; timestamp?: number };
+    };
+
     constructor(data: DeviceInfoRequestedEvent['data']) {
-        super(DeviceInfoRequestedEvent.TYPE);
+        super('deviceInfoRequested');
         this.data = data;
     }
 }
 
 export class MobileDeviceDetectedEvent extends Event {
-    static readonly TYPE = 'mobileDeviceDetected';
-    override readonly type = 'mobileDeviceDetected';
-    readonly data: { deviceInfo: DeviceInfo };
+    override readonly type = 'mobileDeviceDetected' as const;
+    readonly data: {
+        deviceInfo: DeviceInfo;
+    };
+
     constructor(data: MobileDeviceDetectedEvent['data']) {
-        super(MobileDeviceDetectedEvent.TYPE);
+        super('mobileDeviceDetected');
         this.data = data;
     }
 }
 
 export class DesktopDeviceDetectedEvent extends Event {
-    static readonly TYPE = 'desktopDeviceDetected';
-    override readonly type = 'desktopDeviceDetected';
-    readonly data: { deviceInfo: DeviceInfo };
+    override readonly type = 'desktopDeviceDetected' as const;
+    readonly data: {
+        deviceInfo: DeviceInfo;
+    };
+
     constructor(data: DesktopDeviceDetectedEvent['data']) {
-        super(DesktopDeviceDetectedEvent.TYPE);
+        super('desktopDeviceDetected');
         this.data = data;
     }
 }
 
 export class DeviceOrientationChangedEvent extends Event {
-    static readonly TYPE = 'deviceOrientationChanged';
-    override readonly type = 'deviceOrientationChanged';
+    override readonly type = 'deviceOrientationChanged' as const;
     readonly data: {
         orientationData: {
             type: string;
             data: { orientation: string; width: number; height: number; angle: number };
         };
     };
+
     constructor(data: DeviceOrientationChangedEvent['data']) {
-        super(DeviceOrientationChangedEvent.TYPE);
+        super('deviceOrientationChanged');
         this.data = data;
     }
 }
