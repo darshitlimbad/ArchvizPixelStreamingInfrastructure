@@ -621,7 +621,7 @@ export class WebRtcTCPRelayDetectedEvent extends Event {
 // ------------------------------------------------------------------
 
 export class DeviceInfoSentEvent extends Event {
-    override readonly type = 'deviceInfoSent' as const;
+    override readonly type: 'deviceInfoSent';
     readonly data: {
         deviceInfo: DeviceInfo;
     };
@@ -633,7 +633,7 @@ export class DeviceInfoSentEvent extends Event {
 }
 
 export class DeviceInfoRequestedEvent extends Event {
-    override readonly type = 'deviceInfoRequested' as const;
+    override readonly type: 'deviceInfoRequested';
     readonly data: {
         message: { type: string; timestamp?: number };
     };
@@ -645,7 +645,7 @@ export class DeviceInfoRequestedEvent extends Event {
 }
 
 export class MobileDeviceDetectedEvent extends Event {
-    override readonly type = 'mobileDeviceDetected' as const;
+    override readonly type: 'mobileDeviceDetected';
     readonly data: {
         deviceInfo: DeviceInfo;
     };
@@ -657,7 +657,7 @@ export class MobileDeviceDetectedEvent extends Event {
 }
 
 export class DesktopDeviceDetectedEvent extends Event {
-    override readonly type = 'desktopDeviceDetected' as const;
+    override readonly type: 'desktopDeviceDetected';
     readonly data: {
         deviceInfo: DeviceInfo;
     };
@@ -669,7 +669,7 @@ export class DesktopDeviceDetectedEvent extends Event {
 }
 
 export class DeviceOrientationChangedEvent extends Event {
-    override readonly type = 'deviceOrientationChanged' as const;
+    override readonly type: 'deviceOrientationChanged';
     readonly data: {
         orientationData: {
             type: string;

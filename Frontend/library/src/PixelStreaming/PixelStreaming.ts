@@ -136,7 +136,7 @@ export class PixelStreaming {
 
         // Register handler for 'requestDeviceInfo' messages coming FROM the streamer (UE)
         this.registerMessageHandler(
-            'requestDeviceInfo',
+            'requestedDeviceInfo',
             MessageDirection.FromStreamer,
             (data: ArrayBuffer) => {
                 try {
@@ -152,19 +152,19 @@ export class PixelStreaming {
                     // Handle the request - send device info back
                     this.handleDeviceInfoRequest(message);
                 } catch (error) {
-                    console.error('Error parsing requestDeviceInfo message:', error);
+                    console.error('Error parsing requestedDeviceInfo message:', error);
                 }
             }
         );
     }
 
     public handleDeviceInfoRequest(message: any) {
-        console.log('📱 requestDeviceInfo device info:', message);
+        console.log('📱 requestedDeviceInfo device info:', message);
 
         // Emit local event using CustomEvent structure
         this._eventEmitter.dispatchEvent(
             new DeviceInfoRequestedEvent({
-                message: { type: 'requestDeviceInfo', timestamp: Date.now() }
+                message: { type: 'requestedDeviceInfo', timestamp: Date.now() }
             })
         );
 
